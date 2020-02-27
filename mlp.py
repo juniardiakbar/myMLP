@@ -172,7 +172,7 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
                     if (i == len(neuron) - 2):
                         for j in range(neuron[i + 1]):
                             d.append(-1 * (target[j] - outs[i][j]) *
-                                     outs[i][j] * (1 - outs[i][j])) * 2. / neuron[-1]
+                                     outs[i][j] * (1 - outs[i][j]) * 2. / neuron[-1])
                     else:
                         out = calculate_net(weights[i + 1], deltas[i + 1])
 
