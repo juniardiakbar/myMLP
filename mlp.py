@@ -9,15 +9,22 @@ def split_data_set(data, fraction):
     return train_set, test_set
 
 
-def calculate_net(node, weights, biases):
+def calculate_net(node, weights):
+    nets = [0 for i in range(len(node))]
+    for i in range(len(node)):
+        for j in range(len(weights)):
+            nets[i] += node[i][j] * weights[j]
+
+    return nets
+
+
+def calculate_net_bias(node, weights, biases):
     nets = [0 for i in range(len(weights[0]))]
 
     for j in range(len(weights[0])):
         for k in range(len(weights)):
             nets[j] += node[k] * weights[k][j]
-
-            if (len(biases) > 0):
-                nets[j] += biases[j]
+            nets[j] += biases[j]
 
     return nets
 
@@ -97,9 +104,9 @@ def predict(test_X, test_y, neuron, weights, biases):
 
         for i in range(len(neuron) - 1):
             if (i == 0):
-                n = vec_mat_bias(inputs, weights[i], biases[i])
+                n = calculate_net_bias(inputs, weights[i], biases[i])
             else:
-                n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
+                n = calculate_net_bias(outs[i - 1], weights[i], biases[i])
 
             nets.append(n)
             o = sigmoid(n)
@@ -137,9 +144,10 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
                 for i in range(len(neuron) - 1):
                     if (i == 0):
-                        n = calculate_net(inputs, weights[i], biases[i])
+                        n = calculate_net_bias(inputs, weights[i], biases[i])
                     else:
-                        n = calculate_net(outs[i - 1], weights[i], biases[i])
+                        n = calculate_net_bias(
+                            outs[i - 1], weights[i], biases[i])
 
                     nets.append(n)
                     o = sigmoid(n)
@@ -166,7 +174,7 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
                             d.append(-1 * (target[j] - outs[i][j]) *
                                      outs[i][j] * (1 - outs[i][j])) * 2. / neuron[-1]
                     else:
-                        out = calculate_net(weights[i + 1], deltas[i + 1], [])
+                        out = calculate_net(weights[i + 1], deltas[i + 1])
 
                         for j in range(neuron[i + 1]):
                             d.append(out[j] * outs[i][j] * (1 - outs[i][j]))
