@@ -1,5 +1,8 @@
-import pandas as pd
 from mlp import *
+import pandas as pd
+from datetime import datetime
+startTime = datetime.now()
+
 
 df = pd.read_csv("iris.csv")
 
@@ -14,3 +17,4 @@ for i in range(num_hidden_layers):
 
 
 myMLP(df, learning_rate, max_iteration, hidden_layers, batch_size)
+print(datetime.now() - startTime)

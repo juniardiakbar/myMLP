@@ -29,7 +29,7 @@ def sigmoid(net):
     return net
 
 
-def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
+def encode_target_attribute(df):
     target_attribute = list(df.columns)[-1]
     goal_idx = 0
     replace_goal = {}
@@ -39,19 +39,23 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
         goal_idx += 1
 
     df[target_attribute].replace(replace_goal, inplace=True)
+    return df, goal_idx
+
+
+def split_dataset_to_train_and_test(df):
     data_train, data_test = split_data_set(df, .8)
+
+    target_attribute = list(df.columns)[-1]
 
     train_y = data_train[target_attribute]
     train_X = data_train.drop([target_attribute], axis=1)
 
     test_y = data_test[target_attribute]
     test_X = data_test.drop([target_attribute], axis=1)
+    return train_X, train_y, test_X, test_y
 
-    # Define parameter
-    neuron = hidden_layer
-    neuron.insert(0, len(train_X.columns))
-    neuron.append(goal_idx)
 
+def split_trainset_into_chunks(train_X, train_y, batch_size):
     train_X = train_X.values.tolist()
     train_y = train_y.values.tolist()
 
@@ -60,6 +64,10 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
     train_Y_chunk_list = [train_y[batch_size*i:min(batch_size*i+batch_size, len(train_y))]
                           for i in range(len(train_y)//batch_size)]
 
+    return train_X_chunk_list, train_Y_chunk_list
+
+
+def initialize_weight_and_biases(neuron):
     weights = []
     biases = []
 
@@ -75,10 +83,51 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
         for j in range(neuron[i]):
             for k in range(neuron[i + 1]):
                 weights[i][j][k] = 2 * random.random() - 1
+    return weights, biases
 
-    e = 0
-    while (e < max_iteration):
 
+def predict(test_X, test_y, neuron, weights, biases):
+    test_X = test_X.values.tolist()
+    test_y = test_y.values.tolist()
+
+    match = 0
+    for (idx, inputs) in enumerate(test_X):
+        nets = []
+        outs = []
+
+        for i in range(len(neuron) - 1):
+            if (i == 0):
+                n = vec_mat_bias(inputs, weights[i], biases[i])
+            else:
+                n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
+
+            nets.append(n)
+            o = sigmoid(n)
+            outs.append(o)
+
+        if (outs[-1].index(max(outs[-1])) == test_y[idx]):
+            match += 1
+
+    return match/len(test_X)
+
+
+def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
+    df, goal_idx = encode_target_attribute(df)
+
+    # Splitting dataset into training and testing
+    train_X, train_y, test_X, test_y = split_dataset_to_train_and_test(df)
+
+    # Define parameter
+    neuron = [len(train_X.columns)] + hidden_layer + [goal_idx]
+
+    # Splitting into list of mini-batch
+    train_X_chunk_list, train_Y_chunk_list = split_trainset_into_chunks(
+        train_X, train_y, batch_size)
+
+    # Initialize weights and biases
+    weights, biases = initialize_weight_and_biases(neuron)
+
+    for i in range(max_iteration):
         cost_total = 0
         for idx_batch in range(len(train_X_chunk_list)):
 
@@ -137,6 +186,7 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
                     i -= 1
 
+<<<<<<< HEAD
         e += 1
 
     test_X = test_X.values.tolist()
@@ -161,3 +211,6 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
             match += 1
 
     print(match / len(test_X) * 100, "%")
+=======
+    print(predict(test_X, test_y, neuron, weights, biases) * 100, "%")
+>>>>>>> 83d897c86dd05d3e4df4c531376a76a22db840a5
