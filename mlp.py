@@ -1,5 +1,6 @@
 import random
 import math
+from pprint import pprint
 
 
 def split_data_set(data, fraction):
@@ -56,7 +57,7 @@ def myMLP(df):
 
     # Define parameter
     learning_rate = 0.05
-    epoch = 600
+    epoch = 1000
     neuron = [4, 5, 3]
 
     weight = [[0 for j in range(neuron[1])] for i in range(neuron[0])]
@@ -73,49 +74,52 @@ def myMLP(df):
         for j in range(neuron[2]):
             weight_2[i][j] = 2 * random.random() - 1
 
+    batch_size = 15
     train_X = train_X.values.tolist()
     train_y = train_y.values.tolist()
+
+    train_X_chunk_list = [train_X[batch_size*i:min(batch_size*i+batch_size, len(train_X))]
+                          for i in range(len(train_X)//batch_size)]
+    train_Y_chunk_list = [train_y[batch_size*i:min(batch_size*i+batch_size, len(train_X))]
+                          for i in range(len(train_X)//batch_size)]
 
     e = 0
     while (e < epoch):
 
-        cost_total = 0
-        for (idx, inputs) in enumerate(train_X):
-            net_1 = vec_mat_bias(inputs, weight, bias)
-            out_1 = sigmoid(net_1)
+        for idx_batch in range(len(train_X_chunk_list)):
 
-            net_2 = vec_mat_bias(out_1, weight_2, bias_2)
-            out_2 = sigmoid(net_2)
+            for (idx, inputs) in enumerate(train_X_chunk_list[idx_batch]):
+                net_1 = vec_mat_bias(inputs, weight, bias)
+                out_1 = sigmoid(net_1)
 
-            target = [0, 0, 0]
-            target[int(train_y[idx])] = 1
+                net_2 = vec_mat_bias(out_1, weight_2, bias_2)
+                out_2 = sigmoid(net_2)
 
-            # Cost function, Square Root Error
-            error = 0
-            for i in range(neuron[2]):
-                error += (target[i] - out_2[i]) ** 2
-            cost_total += error * 1 / neuron[2]
+                target = [0, 0, 0]
+                target[int(train_Y_chunk_list[idx_batch][idx])] = 1
 
-            # Backward propagation
-            delta_2 = []
-            for j in range(neuron[2]):
-                delta_2.append(-1 * (target[j] - out_2[j]) *
-                               out_2[j] * (1 - out_2[j]))  # * 2 / neuron[2]
-
-            for i in range(neuron[1]):
+                # Backward propagation
+                delta_2 = []
                 for j in range(neuron[2]):
-                    weight_2[i][j] -= learning_rate * (delta_2[j] * out_1[i])
-                    bias_2[j] -= learning_rate * delta_2[j]
+                    delta_2.append(-1 * (target[j] - out_2[j]) *
+                                   out_2[j] * (1 - out_2[j]))  # * 2 / neuron[2]
 
-            # Update weight and bias (layer 1)
-            delta_1 = mat_vec(weight_2, delta_2)
-            for j in range(neuron[1]):
-                delta_1[j] = delta_1[j] * (out_1[j] * (1-out_1[j]))
+                for i in range(neuron[1]):
+                    for j in range(neuron[2]):
+                        weight_2[i][j] -= learning_rate * \
+                            (delta_2[j] * out_1[i])
+                        bias_2[j] -= learning_rate * delta_2[j]
 
-            for i in range(neuron[0]):
+                # Update weight and bias (layer 1)
+                delta_1 = mat_vec(weight_2, delta_2)
                 for j in range(neuron[1]):
-                    weight[i][j] -= learning_rate * (delta_1[j] * inputs[i])
-                    bias[j] -= learning_rate * delta_1[j]
+                    delta_1[j] = delta_1[j] * (out_1[j] * (1-out_1[j]))
+
+                for i in range(neuron[0]):
+                    for j in range(neuron[1]):
+                        weight[i][j] -= learning_rate * \
+                            (delta_1[j] * inputs[i])
+                        bias[j] -= learning_rate * delta_1[j]
 
         e += 1
 
@@ -129,10 +133,6 @@ def myMLP(df):
 
         net_2 = vec_mat_bias(out_1, weight_2, bias_2)
         out_2 = sigmoid(net_2)
-
-        print(out_2)
-
-        print(out_2.index(max(out_2)), test_y[idx])
         if (out_2.index(max(out_2)) == test_y[idx]):
             match += 1
 
