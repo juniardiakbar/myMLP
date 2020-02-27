@@ -186,31 +186,4 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
                     i -= 1
 
-<<<<<<< HEAD
-        e += 1
-
-    test_X = test_X.values.tolist()
-    test_y = test_y.values.tolist()
-
-    match = 0
-    for (idx, inputs) in enumerate(test_X):
-        nets = []
-        outs = []
-
-        for i in range(len(neuron) - 1):
-            if (i == 0):
-                n = calculate_net(inputs, weights[i], biases[i])
-            else:
-                n = calculate_net(outs[i - 1], weights[i], biases[i])
-
-            nets.append(n)
-            o = sigmoid(n)
-            outs.append(o)
-
-        if (outs[-1].index(max(outs[-1])) == test_y[idx]):
-            match += 1
-
-    print(match / len(test_X) * 100, "%")
-=======
     print(predict(test_X, test_y, neuron, weights, biases) * 100, "%")
->>>>>>> 83d897c86dd05d3e4df4c531376a76a22db840a5
