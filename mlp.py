@@ -36,7 +36,7 @@ def sigmoid(A, deriv=False):
     return A
 
 
-def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3]):
+def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
     target_attribute = list(df.columns)[-1]
     goal_idx = 0
     replace_goal = {}
@@ -62,6 +62,11 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3]):
     train_X = train_X.values.tolist()
     train_y = train_y.values.tolist()
 
+    train_X_chunk_list = [train_X[batch_size*i:min(batch_size*i+batch_size, len(train_X))]
+                          for i in range(len(train_X)//batch_size)]
+    train_Y_chunk_list = [train_y[batch_size*i:min(batch_size*i+batch_size, len(train_y))]
+                          for i in range(len(train_y)//batch_size)]
+
     weights = []
     biases = []
 
@@ -82,61 +87,63 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3]):
     while (e < max_iteration):
 
         cost_total = 0
-        for (idx, inputs) in enumerate(train_X):
-            nets = []
-            outs = []
+        for idx_batch in range(len(train_X_chunk_list)):
 
-            for i in range(len(neuron) - 1):
-                if (i == 0):
-                    n = vec_mat_bias(inputs, weights[i], biases[i])
-                else:
-                    n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
+            for (idx, inputs) in enumerate(train_X_chunk_list[idx_batch]):
+                nets = []
+                outs = []
 
-                nets.append(n)
-                o = sigmoid(n)
-                outs.append(o)
+                for i in range(len(neuron) - 1):
+                    if (i == 0):
+                        n = vec_mat_bias(inputs, weights[i], biases[i])
+                    else:
+                        n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
 
-            target = [0 for i in range(neuron[-1])]
-            target[int(train_y[idx])] = 1
+                    nets.append(n)
+                    o = sigmoid(n)
+                    outs.append(o)
 
-            # Cost function, Square Root Error
-            error = 0
-            for i in range(neuron[-1]):
-                error += (target[i] - outs[-1][i]) ** 2
-            cost_total += error * 1 / neuron[2]
+                target = [0 for i in range(neuron[-1])]
+                target[int(train_Y_chunk_list[idx_batch][idx])] = 1
 
-            # Backward propagation
-            deltas = [[] for i in range(len(neuron) - 1)]
+                # Cost function, Square Root Error
+                error = 0
+                for i in range(neuron[-1]):
+                    error += (target[i] - outs[-1][i]) ** 2
+                cost_total += error * 1 / neuron[2]
 
-            i = len(neuron) - 2
-            while (i >= 0):
+                # Backward propagation
+                deltas = [[] for i in range(len(neuron) - 1)]
 
-                if (i == len(neuron) - 2):
-                    d = []
+                i = len(neuron) - 2
+                while (i >= 0):
 
-                    for j in range(neuron[i + 1]):
-                        d.append(-1 * (target[j] - outs[i][j]) *
-                                 outs[i][j] * (1 - outs[i][j]))  # * 2 / neuron[2]
-                else:
-                    d = mat_vec(weights[i + 1], deltas[i + 1])
+                    if (i == len(neuron) - 2):
+                        d = []
 
-                    for j in range(neuron[i + 1]):
-                        d[j] = d[j] * (outs[i][j] * (1 - outs[i][j]))
+                        for j in range(neuron[i + 1]):
+                            d.append(-1 * (target[j] - outs[i][j]) *
+                                     outs[i][j] * (1 - outs[i][j]))  # * 2 / neuron[2]
+                    else:
+                        d = mat_vec(weights[i + 1], deltas[i + 1])
 
-                deltas[i] = d
+                        for j in range(neuron[i + 1]):
+                            d[j] = d[j] * (outs[i][j] * (1 - outs[i][j]))
 
-                for j in range(neuron[i]):
-                    for k in range(neuron[i+1]):
-                        if (i == 0):
-                            weights[i][j][k] -= learning_rate * \
-                                (deltas[i][k] * inputs[j])
-                        else:
-                            weights[i][j][k] -= learning_rate * \
-                                (deltas[i][k] * outs[i - 1][j])
+                    deltas[i] = d
 
-                        biases[i][k] -= learning_rate * deltas[i][k]
+                    for j in range(neuron[i]):
+                        for k in range(neuron[i+1]):
+                            if (i == 0):
+                                weights[i][j][k] -= learning_rate * \
+                                    (deltas[i][k] * inputs[j])
+                            else:
+                                weights[i][j][k] -= learning_rate * \
+                                    (deltas[i][k] * outs[i - 1][j])
 
-                i -= 1
+                            biases[i][k] -= learning_rate * deltas[i][k]
+
+                    i -= 1
 
         e += 1
 
