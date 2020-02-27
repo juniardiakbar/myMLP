@@ -9,31 +9,24 @@ def split_data_set(data, fraction):
     return train_set, test_set
 
 
-def mat_vec(A, B):
-    C = [0 for i in range(len(A))]
-    for i in range(len(A)):
-        for j in range(len(B)):
-            C[i] += A[i][j] * B[j]
-    return C
+def calculate_net(node, weights, biases):
+    nets = [0 for i in range(len(weights[0]))]
+
+    for j in range(len(weights[0])):
+        for k in range(len(weights)):
+            nets[j] += node[k] * weights[k][j]
+
+            if (len(biases) > 0):
+                nets[j] += biases[j]
+
+    return nets
 
 
-def vec_mat_bias(A, B, bias):
-    C = [0 for i in range(len(B[0]))]
-    for j in range(len(B[0])):
-        for k in range(len(B)):
-            C[j] += A[k] * B[k][j]
-            C[j] += bias[j]
-    return C
+def sigmoid(net):
+    for i in range(len(net)):
+        net[i] = 1 / (1 + math.exp(-net[i]))
 
-
-def sigmoid(A, deriv=False):
-    if deriv:
-        for i in range(len(A)):
-            A[i] = A[i] * (1 - A[i])
-    else:
-        for i in range(len(A)):
-            A[i] = 1 / (1 + math.exp(-A[i]))
-    return A
+    return net
 
 
 def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
@@ -95,9 +88,9 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
                 for i in range(len(neuron) - 1):
                     if (i == 0):
-                        n = vec_mat_bias(inputs, weights[i], biases[i])
+                        n = calculate_net(inputs, weights[i], biases[i])
                     else:
-                        n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
+                        n = calculate_net(outs[i - 1], weights[i], biases[i])
 
                     nets.append(n)
                     o = sigmoid(n)
@@ -118,17 +111,16 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
                 i = len(neuron) - 2
                 while (i >= 0):
 
+                    d = []
                     if (i == len(neuron) - 2):
-                        d = []
-
                         for j in range(neuron[i + 1]):
                             d.append(-1 * (target[j] - outs[i][j]) *
-                                     outs[i][j] * (1 - outs[i][j]))  # * 2 / neuron[2]
+                                     outs[i][j] * (1 - outs[i][j])) * 2. / neuron[-1]
                     else:
-                        d = mat_vec(weights[i + 1], deltas[i + 1])
+                        out = calculate_net(weights[i + 1], deltas[i + 1], [])
 
                         for j in range(neuron[i + 1]):
-                            d[j] = d[j] * (outs[i][j] * (1 - outs[i][j]))
+                            d.append(out[j] * outs[i][j] * (1 - outs[i][j]))
 
                     deltas[i] = d
 
@@ -157,9 +149,9 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
         for i in range(len(neuron) - 1):
             if (i == 0):
-                n = vec_mat_bias(inputs, weights[i], biases[i])
+                n = calculate_net(inputs, weights[i], biases[i])
             else:
-                n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
+                n = calculate_net(outs[i - 1], weights[i], biases[i])
 
             nets.append(n)
             o = sigmoid(n)
