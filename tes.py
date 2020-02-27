@@ -1,10 +1,9 @@
 import random
 import math
-import pandas as pd
 
 
 def split_data_set(data, fraction):
-    train_set = data.sample(frac=0.8, random_state=10)
+    train_set = data.sample(frac=0.8, random_state=random.randrange(10))
     test_set = data.drop(train_set.index)
 
     return train_set, test_set
@@ -37,7 +36,7 @@ def sigmoid(A, deriv=False):
     return A
 
 
-def myMLP(df):
+def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3]):
     target_attribute = list(df.columns)[-1]
     goal_idx = 0
     replace_goal = {}
@@ -55,84 +54,104 @@ def myMLP(df):
     test_y = data_test[target_attribute]
     test_X = data_test.drop([target_attribute], axis=1)
 
-    # Define parameter
-    learning_rate = 0.05
-    epoch = 100
-    neuron = [4, 3, 3]
+    # # Define parameter
+    # neuron = hidden_layer
+    # neuron.insert(0, len(train_X.columns))
+    # neuron.append(goal_idx)
 
-    weight = [[0 for j in range(neuron[1])] for i in range(neuron[0])]
-    weight_2 = [[0 for j in range(neuron[2])] for i in range(neuron[1])]
-    bias = [0 for i in range(neuron[1])]
-    bias_2 = [0 for i in range(neuron[2])]
-
-    # Initiate weight with random between -1.0 ... 1.0
-    for i in range(neuron[0]):
-        for j in range(neuron[1]):
-            weight[i][j] = 2 * random.random() - 1
-
-    for i in range(neuron[1]):
-        for j in range(neuron[2]):
-            weight_2[i][j] = 2 * random.random() - 1
-
-    print(weight)
-    print(weight_2)
+    neuron = [2, 2, 2]
 
     train_X = train_X.values.tolist()
     train_y = train_y.values.tolist()
 
+    weights = []
+    biases = []
+
+    for i in range(len(neuron) - 1):
+        w = [[0 for k in range(neuron[i + 1])] for j in range(neuron[i])]
+        b = [0 for j in range(neuron[i + 1])]
+
+        weights.append(w)
+        biases.append(b)
+
+    # Initiate weight with random between -1.0 ... 1.0
+    for i in range(len(neuron) - 1):
+        for j in range(neuron[i]):
+            for k in range(neuron[i + 1]):
+                weights[i][j][k] = 2 * random.random() - 1
+
+    weights = [[[.15, .25, ], [.2, .3]], [[.4, .5, ], [.45, .55]]]
+    biases = [[.175, .175], [.3, .3]]
+
     e = 0
-    while (e < epoch):
+    while (e < max_iteration):
 
         cost_total = 0
         for (idx, inputs) in enumerate(train_X):
-            net_1 = vec_mat_bias(inputs, weight, bias)
-            out_1 = sigmoid(net_1)
+            nets = []
+            outs = []
 
-            net_2 = vec_mat_bias(out_1, weight_2, bias_2)
-            out_2 = sigmoid(net_2)
+            inputs = [0.05, 0.1]
 
-            net_3 = vec_mat_bias(out_2, weight_3, bias_3)
-            out_3 = sigmoid(net_3)
+            for i in range(len(neuron) - 1):
+                if (i == 0):
+                    n = vec_mat_bias(inputs, weights[i], biases[i])
+                else:
+                    n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
 
-            target = [0, 0, 0]
-            target[int(train_y[idx])] = 1
+                o = sigmoid(n)
+
+                nets.append(n)
+                outs.append(o)
+
+            # target = [0 for i in range(neuron[-1])]
+            # target[int(train_y[idx])] = 1
+
+            target = [.01, .99]
 
             # Cost function, Square Root Error
             error = 0
-            for i in range(neuron[3]):
-                error += (target[i] - out_2[i]) ** 2
+            for i in range(neuron[-1]):
+                error += (target[i] - outs[-1][i]) ** 2
+
             cost_total += error * 1 / neuron[2]
 
+            print(cost_total)
+
             # Backward propagation
-            delta_3 = []
-            for j in range(neuron[3]):
-                delta_3.append(-1 * (target[j] - out_3[j]) *
-                               out_3[j] * (1 - out_3[j]))  # * 2 / neuron[2]
+            deltas = [[] for i in range(len(neuron) - 1)]
 
-            for i in range(neuron[2]):
-                for j in range(neuron[3]):
-                    weight_3[i][j] -= learning_rate * (delta_3[j] * out_2[i])
-                    bias_3[j] -= learning_rate * delta_3[j]
+            i = len(neuron) - 2
+            while (i >= 0):
 
-            # Update weight and bias (layer 1)
-            delta_2 = mat_vec(weight_3, delta_3)
-            for j in range(neuron[2]):
-                delta_2[j] = delta_2[j] * (out_2[j] * (1-out_2[j]))
+                if (i == len(neuron) - 2):
+                    d = []
 
-            for i in range(neuron[1]):
-                for j in range(neuron[2]):
-                    weight_2[i][j] -= learning_rate * (delta_2[j] * out_1[i])
-                    bias_2[j] -= learning_rate * delta_2[j]
+                    for j in range(neuron[i + 1]):
+                        d.append(-1 * (target[j] - outs[i][j]) *
+                                 outs[i][j] * (1 - outs[i][j]))  # * 2 / neuron[2]
+                else:
+                    d = mat_vec(weights[i + 1], deltas[i + 1])
 
-            # Update weight and bias (layer 1)
-            delta_1 = mat_vec(weight_2, delta_2)
-            for j in range(neuron[1]):
-                delta_1[j] = delta_1[j] * (out_1[j] * (1-out_1[j]))
+                    for j in range(neuron[i + 1]):
+                        d[j] = d[j] * (outs[i][j] * (1 - outs[i][j]))
 
-            for i in range(neuron[0]):
-                for j in range(neuron[1]):
-                    weight[i][j] -= learning_rate * (delta_1[j] * inputs[i])
-                    bias[j] -= learning_rate * delta_1[j]
+                deltas[i] = d
+
+                for j in range(neuron[i]):
+                    for k in range(neuron[i+1]):
+                        if (i == 0):
+                            weights[i][j][k] -= learning_rate * \
+                                (deltas[i][k] * inputs[j])
+                        else:
+                            weights[i][j][k] -= learning_rate * \
+                                (deltas[i][k] * outs[i - 1][j])
+
+                        # biases[i][k] -= learning_rate * deltas[i][k]
+
+                i -= 1
+
+            break
 
         e += 1
 
@@ -141,21 +160,20 @@ def myMLP(df):
 
     match = 0
     for (idx, inputs) in enumerate(test_X):
-        net_1 = vec_mat_bias(inputs, weight, bias)
-        out_1 = sigmoid(net_1)
+        nets = []
+        outs = []
 
-        net_2 = vec_mat_bias(out_1, weight_2, bias_2)
-        out_2 = sigmoid(net_2)
+        for i in range(len(neuron) - 1):
+            if (i == 0):
+                n = vec_mat_bias(inputs, weights[i], biases[i])
+            else:
+                n = vec_mat_bias(outs[i - 1], weights[i], biases[i])
 
-        net_3 = vec_mat_bias(out_2, weight_3, bias_3)
-        out_3 = sigmoid(net_3)
+            nets.append(n)
+            o = sigmoid(n)
+            outs.append(o)
 
-        print(out_3.index(max(out_3)), test_y[idx])
-        if (out_3.index(max(out_3)) == test_y[idx]):
+        if (outs[-1].index(max(outs[-1])) == test_y[idx]):
             match += 1
 
     print(match / len(test_X) * 100, "%")
-
-
-df = pd.read_csv("iris.csv")
-myMLP(df)
