@@ -3,7 +3,7 @@ import math
 
 
 def split_data_set(data, fraction):
-    train_set = data.sample(frac=0.8, random_state=random.randrange(10))
+    train_set = data.sample(frac=fraction, random_state=random.randrange(10))
     test_set = data.drop(train_set.index)
 
     return train_set, test_set
@@ -49,8 +49,8 @@ def encode_target_attribute(df):
     return df, goal_idx
 
 
-def split_dataset_to_train_and_test(df):
-    data_train, data_test = split_data_set(df, .8)
+def split_dataset_to_train_and_test(df, split_rate):
+    data_train, data_test = split_data_set(df, split_rate)
 
     target_attribute = list(df.columns)[-1]
 
@@ -93,11 +93,15 @@ def initialize_weight_and_biases(neuron):
     return weights, biases
 
 
-def predict(test_X, test_y, neuron, weights, biases):
-    test_X = test_X.values.tolist()
-    test_y = test_y.values.tolist()
+def predict(mlp, test_X):
+    neuron = mlp[0]
+    weights = mlp[1]
+    biases = mlp[2]
 
-    match = 0
+    test_X = test_X.values.tolist()
+    # test_y = test_y.values.tolist()
+
+    pred_y = []
     for (idx, inputs) in enumerate(test_X):
         nets = []
         outs = []
@@ -112,17 +116,12 @@ def predict(test_X, test_y, neuron, weights, biases):
             o = sigmoid(n)
             outs.append(o)
 
-        if (outs[-1].index(max(outs[-1])) == test_y[idx]):
-            match += 1
+        pred_y.append(outs[-1].index(max(outs[-1])))
 
-    return match/len(test_X)
+    return pred_y
 
 
-def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
-    df, goal_idx = encode_target_attribute(df)
-
-    # Splitting dataset into training and testing
-    train_X, train_y, test_X, test_y = split_dataset_to_train_and_test(df)
+def myMLP(train_X, train_y, goal_idx, split_rate=0.9, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_size=10):
 
     # Define parameter
     neuron = [len(train_X.columns)] + hidden_layer + [goal_idx]
@@ -194,4 +193,4 @@ def myMLP(df, learning_rate=0.05, max_iteration=600, hidden_layer=[3], batch_siz
 
                     i -= 1
 
-    print(predict(test_X, test_y, neuron, weights, biases) * 100, "%")
+    return [neuron, weights, biases]
